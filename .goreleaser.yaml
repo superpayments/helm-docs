@@ -1,7 +1,6 @@
 before:
   hooks:
     - go mod tidy
-    - go generate ./...
     - go test ./...
 
 builds:
@@ -40,3 +39,16 @@ changelog:
     exclude:
       - "^docs:"
       - "^test:"
+
+nfpms:
+- vendor: helm-docs
+  homepage: https://github.com/k8s-at-home/helm-docs
+  maintainer: k8s-at-home
+  description: A tool for automatically generating markdown documentation for helm charts
+  license: GNU General Public License v3.0
+  formats:
+  - deb
+  - rpm
+  replacements:
+    amd64: x86_64
+    linux: Linux
