@@ -67,7 +67,6 @@ func getSortedValuesTableRows(documentRoot *yaml.Node, chartValuesDescriptions m
 func getChartTemplateData(chartDocumentationInfo helm.ChartDocumentationInfo, helmDocsVersion string) (chartTemplateData, error) {
 	var valuesTableRows []valueRow
 
-	// TODO: wrap this with a loop through the list of ChartValues
 	for _, chartValues := range chartDocumentationInfo.ChartValues {
 		// handle empty values file case
 		if chartValues.ValuesFileContents.Kind == 0 {
