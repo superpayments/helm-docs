@@ -45,7 +45,7 @@ func helmDocs(cmd *cobra.Command, _ []string) {
 		fullChartSearchRoot = path.Join(cwd, chartSearchRoot)
 	}
 
-	customValuesFiles := viper.GetStringSlice("custom-values-files")
+	customValuesFiles := viper.GetStringSlice("custom-values-file")
 	log.Debugf("Searching for custom values files called [%s]", strings.Join(customValuesFiles, ", "))
 
 	chartDirs, err := helm.FindChartDirectories(fullChartSearchRoot)
