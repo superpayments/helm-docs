@@ -87,15 +87,18 @@ func getChartTemplateData(chartDocumentationInfo helm.ChartDocumentationInfo, he
 		}
 
 		separatorRow := valueRow{
-			Key:             "---",
+			Key:             fmt.Sprintf("**Defaults for values file \"%s\":**", chartValues.ValuesFileName),
 			Type:            "---",
 			AutoDefault:     "---",
 			Default:         "---",
 			AutoDescription: "---",
-			Description:     chartValues.ValuesFileName,
+			Description:     "---",
 		}
 
-		valuesTableRows = append(valuesTableRows, separatorRow)
+		if len(chartDocumentationInfo.ChartValues) > 1 {
+			valuesTableRows = append(valuesTableRows, separatorRow)
+		}
+
 		valuesTableRows = append(valuesTableRows, rows...)
 	}
 
