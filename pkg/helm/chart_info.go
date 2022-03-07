@@ -2,6 +2,7 @@ package helm
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -37,7 +38,7 @@ type ChartMeta struct {
 	Sources     []string
 	Engine      string
 	Maintainers []ChartMetaMaintainer
-	Annotations	map[string]string
+	Annotations map[string]string
 }
 
 type ChartRequirementsItem struct {
@@ -60,9 +61,14 @@ type ChartDocumentationInfo struct {
 	ChartMeta
 	ChartRequirements
 
-	ChartDirectory          string
-	ChartValues             *yaml.Node
-	ChartValuesDescriptions map[string]ChartValueDescription
+	ChartDirectory string
+	ChartValues    []ChartValues
+}
+
+type ChartValues struct {
+	ValuesFileName     string
+	ValuesFileContents *yaml.Node
+	ValuesDescriptions *map[string]ChartValueDescription
 }
 
 func getYamlFileContents(filename string) ([]byte, error) {
@@ -141,8 +147,7 @@ func parseChartRequirementsFile(chartDirectory string, apiVersion string) (Chart
 	return chartRequirements, nil
 }
 
-func parseChartValuesFile(chartDirectory string) (yaml.Node, error) {
-	valuesPath := path.Join(chartDirectory, "values.yaml")
+func parseChartValuesFile(valuesPath string) (yaml.Node, error) {
 	yamlFileContents, err := getYamlFileContents(valuesPath)
 
 	var values yaml.Node
@@ -154,8 +159,7 @@ func parseChartValuesFile(chartDirectory string) (yaml.Node, error) {
 	return values, err
 }
 
-func parseChartValuesFileComments(chartDirectory string) (map[string]ChartValueDescription, error) {
-	valuesPath := path.Join(chartDirectory, "values.yaml")
+func parseChartValuesFileComments(valuesPath string) (map[string]ChartValueDescription, error) {
 	valuesFile, err := os.Open(valuesPath)
 
 	if isErrorInReadingNecessaryFile(valuesPath, err) {
@@ -208,7 +212,31 @@ func parseChartValuesFileComments(chartDirectory string) (map[string]ChartValueD
 	return keyToDescriptions, nil
 }
 
-func ParseChartInformation(chartDirectory string) (ChartDocumentationInfo, error) {
+func getChartValuesFiles(chartDirectory string, customValuesFiles []string) ([]string, error) {
+	var err error
+	var valuesFiles []string
+	valuesFiles = append(valuesFiles, path.Join(chartDirectory, "values.yaml"))
+
+	for _, valuesFile := range customValuesFiles {
+		valuesFilePath := path.Join(chartDirectory, valuesFile)
+		if _, err := os.Stat(valuesFilePath); err == nil {
+			valuesFiles = append(valuesFiles, valuesFilePath)
+		} else if errors.Is(err, os.ErrNotExist) {
+			continue
+		} else {
+			log.Warnf("Something went wrong reading file path %s", valuesFilePath)
+			return nil, err
+		}
+	}
+
+	if err != nil {
+		return valuesFiles, err
+	}
+
+	return valuesFiles, nil
+}
+
+func ParseChartInformation(chartDirectory string, customValuesFiles []string) (ChartDocumentationInfo, error) {
 	var chartDocInfo ChartDocumentationInfo
 	var err error
 
@@ -223,15 +251,29 @@ func ParseChartInformation(chartDirectory string) (ChartDocumentationInfo, error
 		return chartDocInfo, err
 	}
 
-	chartValues, err := parseChartValuesFile(chartDirectory)
+	valuesFiles, err := getChartValuesFiles(chartDirectory, customValuesFiles)
 	if err != nil {
 		return chartDocInfo, err
 	}
 
-	chartDocInfo.ChartValues = &chartValues
-	chartDocInfo.ChartValuesDescriptions, err = parseChartValuesFileComments(chartDirectory)
-	if err != nil {
-		return chartDocInfo, err
+	for _, valuesFile := range valuesFiles {
+		chartValues := ChartValues{
+			ValuesFileName: path.Base(valuesFile),
+		}
+
+		contents, err := parseChartValuesFile(valuesFile)
+		chartValues.ValuesFileContents = &contents
+		if err != nil {
+			return chartDocInfo, err
+		}
+
+		descriptions, err := parseChartValuesFileComments(valuesFile)
+		chartValues.ValuesDescriptions = &descriptions
+		if err != nil {
+			return chartDocInfo, err
+		}
+
+		chartDocInfo.ChartValues = append(chartDocInfo.ChartValues, chartValues)
 	}
 
 	return chartDocInfo, nil
