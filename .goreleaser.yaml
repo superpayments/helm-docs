@@ -42,8 +42,8 @@ changelog:
 
 nfpms:
 - vendor: helm-docs
-  homepage: https://github.com/k8s-at-home/helm-docs
-  maintainer: k8s-at-home
+  homepage: https://github.com/heyhabito/helm-docs
+  maintainer: heyhabito
   description: A tool for automatically generating markdown documentation for helm charts
   license: GNU General Public License v3.0
   formats:
