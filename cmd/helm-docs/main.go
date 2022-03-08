@@ -14,9 +14,9 @@ import (
 	"github.com/norwoodj/helm-docs/pkg/helm"
 )
 
-func retrieveInfoAndPrintDocumentation(chartDirectory string, chartSearchRoot string, templateFiles []string, waitGroup *sync.WaitGroup, dryRun bool) {
+func retrieveInfoAndPrintDocumentation(chartDirectory string, chartSearchRoot string, templateFiles []string, customValuesFiles []string, waitGroup *sync.WaitGroup, dryRun bool) {
 	defer waitGroup.Done()
-	chartDocumentationInfo, err := helm.ParseChartInformation(path.Join(chartSearchRoot, chartDirectory))
+	chartDocumentationInfo, err := helm.ParseChartInformation(path.Join(chartSearchRoot, chartDirectory), customValuesFiles)
 
 	if err != nil {
 		log.Warnf("Error parsing information for chart %s, skipping: %s", chartDirectory, err)
@@ -45,6 +45,9 @@ func helmDocs(cmd *cobra.Command, _ []string) {
 		fullChartSearchRoot = path.Join(cwd, chartSearchRoot)
 	}
 
+	customValuesFiles := viper.GetStringSlice("custom-values-file")
+	log.Debugf("Searching for custom values files called [%s]", strings.Join(customValuesFiles, ", "))
+
 	chartDirs, err := helm.FindChartDirectories(fullChartSearchRoot)
 	if err != nil {
 		log.Errorf("Error finding chart directories: %s", err)
@@ -64,9 +67,9 @@ func helmDocs(cmd *cobra.Command, _ []string) {
 
 		// On dry runs all output goes to stdout, and so as to not jumble things, generate serially
 		if dryRun {
-			retrieveInfoAndPrintDocumentation(c, fullChartSearchRoot, templateFiles, &waitGroup, dryRun)
+			retrieveInfoAndPrintDocumentation(c, fullChartSearchRoot, templateFiles, customValuesFiles, &waitGroup, dryRun)
 		} else {
-			go retrieveInfoAndPrintDocumentation(c, fullChartSearchRoot, templateFiles, &waitGroup, dryRun)
+			go retrieveInfoAndPrintDocumentation(c, fullChartSearchRoot, templateFiles, customValuesFiles, &waitGroup, dryRun)
 		}
 	}
 

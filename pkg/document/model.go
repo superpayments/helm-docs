@@ -5,8 +5,8 @@ import (
 	"sort"
 	"strconv"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/norwoodj/helm-docs/pkg/helm"
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"gopkg.in/yaml.v3"
 )
@@ -64,28 +64,49 @@ func getSortedValuesTableRows(documentRoot *yaml.Node, chartValuesDescriptions m
 	return valuesTableRows, nil
 }
 
-
 func getChartTemplateData(chartDocumentationInfo helm.ChartDocumentationInfo, helmDocsVersion string) (chartTemplateData, error) {
-	// handle empty values file case
-	if chartDocumentationInfo.ChartValues.Kind == 0 {
+	var valuesTableRows []valueRow
+
+	for _, chartValues := range chartDocumentationInfo.ChartValues {
+		// handle empty values file case
+		if chartValues.ValuesFileContents.Kind == 0 {
+			continue
+		}
+
+		if chartValues.ValuesFileContents.Kind != yaml.DocumentNode {
+			return chartTemplateData{}, fmt.Errorf("invalid node kind supplied: %d", chartValues.ValuesFileContents.Kind)
+		}
+		if chartValues.ValuesFileContents.Content[0].Kind != yaml.MappingNode {
+			return chartTemplateData{}, fmt.Errorf("values file must resolve to a map, not %s", strconv.Itoa(int(chartValues.ValuesFileContents.Kind)))
+		}
+
+		rows, err := getSortedValuesTableRows(chartValues.ValuesFileContents.Content[0], *chartValues.ValuesDescriptions)
+		if err != nil {
+			return chartTemplateData{}, err
+		}
+
+		separatorRow := valueRow{
+			Key:             fmt.Sprintf("**Defaults for values file \"%s\":**", chartValues.ValuesFileName),
+			Type:            "---",
+			AutoDefault:     "---",
+			Default:         "---",
+			AutoDescription: "---",
+			Description:     "---",
+		}
+
+		if len(chartDocumentationInfo.ChartValues) > 1 {
+			valuesTableRows = append(valuesTableRows, separatorRow)
+		}
+
+		valuesTableRows = append(valuesTableRows, rows...)
+	}
+
+	if valuesTableRows == nil {
 		return chartTemplateData{
 			ChartDocumentationInfo: chartDocumentationInfo,
 			HelmDocsVersion:        helmDocsVersion,
 			Values:                 make([]valueRow, 0),
 		}, nil
-	}
-
-	if chartDocumentationInfo.ChartValues.Kind != yaml.DocumentNode {
-		return chartTemplateData{}, fmt.Errorf("invalid node kind supplied: %d", chartDocumentationInfo.ChartValues.Kind)
-	}
-	if chartDocumentationInfo.ChartValues.Content[0].Kind != yaml.MappingNode {
-		return chartTemplateData{}, fmt.Errorf("values file must resolve to a map, not %s", strconv.Itoa(int(chartDocumentationInfo.ChartValues.Kind)))
-	}
-
-	valuesTableRows, err := getSortedValuesTableRows(chartDocumentationInfo.ChartValues.Content[0], chartDocumentationInfo.ChartValuesDescriptions)
-
-	if err != nil {
-		return chartTemplateData{}, err
 	}
 
 	return chartTemplateData{
