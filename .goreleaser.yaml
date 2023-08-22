@@ -20,12 +20,13 @@ builds:
       - windows
 
 archives:
-  - replacements:
-      darwin: Darwin
-      linux: Linux
-      windows: Windows
-      386: i386
-      amd64: x86_64
+  - name_template: >-
+      {{- .ProjectName }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end -}}
 
 checksum:
   name_template: checksums.txt
@@ -42,13 +43,17 @@ changelog:
 
 nfpms:
 - vendor: helm-docs
-  homepage: https://github.com/heyhabito/helm-docs
-  maintainer: heyhabito
+  homepage: https://github.com/superpayments/helm-docs
+  maintainer: superpayments
   description: A tool for automatically generating markdown documentation for helm charts
   license: GNU General Public License v3.0
   formats:
   - deb
   - rpm
-  replacements:
-    amd64: x86_64
-    linux: Linux
+  file_name_template: >-
+    {{- .ProjectName }}_
+    {{- title .Os }}_
+    {{- if eq .Arch "amd64" }}x86_64
+    {{- else if eq .Arch "386" }}i386
+    {{- else }}{{ .Arch }}{{ end }}
+    {{- if .Arm }}v{{ .Arm }}{{ end -}}
